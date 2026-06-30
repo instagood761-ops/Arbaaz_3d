@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Racing Master">
+    <title>🏎️ Racing Master - 3D Car Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+            position: fixed;
+        }
+        
+        #gameContainer {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .hud-info {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 20, 50, 0.8));
+            color: #00ff00;
+            padding: 12px 18px;
+            border-radius: 8px;
+            border: 2px solid #00ff00;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            min-width: 180px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+        
+        .hud-info div {
+            margin: 6px 0;
+            display: flex;
+            justify-content: space-between;
+            min-width: 160px;
+        }
+        
+        .label {
+            color: #00ff00;
+            font-size: 12px;
+            opacity: 0.7;
+            margin-right: 10px;
+        }
+        
+        .value {
+            color: #ffff00;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .mini-map {
+            position: absolute;
+            bottom: 150px;
+            right: 15px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+        
+        /* Mobile Controls */
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            height: 140px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 2fr 1fr;
+            gap: 8px;
+            pointer-events: auto;
+            z-index: 20;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, rgba(100, 100, 255, 0.8), rgba(50, 50, 200, 0.8));
+            border: 2px solid rgba(150, 150, 255, 1);
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            box-shadow: 0 4px 15px rgba(100, 100, 255, 0.4);
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .control-btn:active,
+        .control-btn.active {
+            background: linear-gradient(135deg, rgba(150, 150, 255, 1), rgba(100, 100, 255, 1));
+            box-shadow: 0 0 20px rgba(150, 150, 255, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.3);
+            transform: scale(0.98);
+        }
+        
+        #accelerateBtn {
+            grid-column: 3;
+            background: linear-gradient(135deg, rgba(0, 200, 0, 0.8), rgba(0, 150, 0, 0.8));
+            border-color: rgba(100, 255, 100, 1);
+            font-size: 14px;
+        }
+        
+        #accelerateBtn:active,
+        #accelerateBtn.active {
+            background: linear-gradient(135deg, rgba(100, 255, 100, 1), rgba(0, 200, 0, 1));
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        #brakeBtn {
+            background: linear-gradient(135deg, rgba(200, 0, 0, 0.8), rgba(150, 0, 0, 0.8));
+            border-color: rgba(255, 100, 100, 1);
+        }
+        
+        #brakeBtn:active,
+        #brakeBtn.active {
+            background: linear-gradient(135deg, rgba(255, 100, 100, 1), rgba(200, 0, 0, 1));
+            box-shadow: 0 0 25px rgba(255, 0, 0, 0.9), inset 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Game Over Screen */
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            pointer-events: auto;
+        }
+        
+        #gameOverScreen.show {
+            display: flex;
+        }
+        
+        .game-over-content {
+            text-align: center;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .game-over-content h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+        }
+        
+        .game-over-content p {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #ffff00;
+        }
+        
+        .restart-btn {
+            margin-top: 30px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background: linear-gradient(135deg, rgba(0, 200, 0, 0.9), rgba(0, 150, 0, 0.9));
+            border: 2px solid #00ff00;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+            transition: all 0.2s;
+        }
+        
+        .restart-btn:active {
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.9);
+            transform: scale(0.95);
+        }
+
+        /* Loading Screen */
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #00ff00;
+            border-top: 4px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingScreen">
+        <div class="spinner"></div>
+        <div>Racing Master लोड हो रहा है...</div>
+    </div>
+
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+        <div id="hud">
+            <div class="hud-info">
+                <div><span class="label">LAP:</span> <span class="value" id="lapCounter">1</span>/3</div>
+                <div><span class="label">SPEED:</span> <span class="value" id="speedometer">0</span> km/h</div>
+                <div><span class="label">POS:</span> <span class="value" id="positionCounter">1st</span></div>
+            </div>
+            <canvas id="minimap" class="mini-map" width="120" height="120"></canvas>
+        </div>
+        <div id="gameOverScreen">
+            <div class="game-over-content">
+                <h1 id="gameOverTitle">🏁 RACE COMPLETE!</h1>
+                <p id="gameOverStats"></p>
+                <button class="restart-btn" onclick="location.reload()">🔄 फिर से खेलो</button>
+            </div>
+        </div>
+        <div id="controls">
+            <button class="control-btn" id="leftBtn">⬅️<br>LEFT</button>
+            <button class="control-btn" id="rightBtn">➡️<br>RIGHT</button>
+            <button class="control-btn" id="accelerateBtn">⬆️<br>SPEED</button>
+            <button class="control-btn" id="brakeBtn">⬇️<br>BRAKE</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Hide loading screen after game loads
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').style.display = 'none';
+            }, 1000);
+        });
+
+        // ============ GAME SETUP ============
+        const canvas = document.getElementById('canvas');
+        const miniMapCanvas = document.getElementById('minimap');
+        const miniMapCtx = miniMapCanvas.getContext('2d');
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 300, 500);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+        
+        // ============ LIGHTING ============
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(100, 100, 100);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+        
+        // ============ GROUND ============
+        const groundGeometry = new THREE.PlaneGeometry(400, 400);
+        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x2d5016 });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Add grass details
+        const grassGeometry = new THREE.PlaneGeometry(50, 50);
+        const grassMaterial = new THREE.MeshLambertMaterial({ color: 0x1a3a0a });
+        for (let i = -4; i < 4; i++) {
+            for (let j = -4; j < 4; j++) {
+                const grass = new THREE.Mesh(grassGeometry, grassMaterial);
+                grass.rotation.x = -Math.PI / 2;
+                grass.position.set(i * 50, 0, j * 50);
+                grass.receiveShadow = true;
+                scene.add(grass);
+            }
+        }
+        
+        // ============ TRACK CREATION ============
+        function createTrack() {
+            const trackGroup = new THREE.Group();
+            
+            const trackCurve = new THREE.CatmullRomCurve3([
+                new THREE.Vector3(0, 0, -80),
+                new THREE.Vector3(100, 0, -80),
+                new THREE.Vector3(120, 0, 0),
+                new THREE.Vector3(100, 0, 80),
+                new THREE.Vector3(0, 0, 100),
+                new THREE.Vector3(-100, 0, 80),
+                new THREE.Vector3(-120, 0, 0),
+                new THREE.Vector3(-100, 0, -80),
+                new THREE.Vector3(0, 0, -80)
+            ]);
+            
+            const points = trackCurve.getPoints(300);
+            
+            for (let i = 0; i < points.length - 1; i++) {
+                const roadWidth = 15;
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                
+                const direction = new THREE.Vector3().subVectors(p2, p1).normalize();
+                const perpendicular = new THREE.Vector3(-direction.z, 0, direction.x);
+                
+                const geometry = new THREE.BufferGeometry();
+                const vertices = new Float32Array([
+                    p1.x + perpendicular.x * roadWidth, p1.y + 0.05, p1.z + perpendicular.z * roadWidth,
+                    p1.x - perpendicular.x * roadWidth, p1.y + 0.05, p1.z - perpendicular.z * roadWidth,
+                    p2.x + perpendicular.x * roadWidth, p2.y + 0.05, p2.z + perpendicular.z * roadWidth,
+                    p2.x - perpendicular.x * roadWidth, p2.y + 0.05, p2.z - perpendicular.z * roadWidth,
+                ]);
+                
+                const indices = new Uint16Array([0, 1, 2, 1, 3, 2]);
+                geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+                geometry.computeVertexNormals();
+                
+                const material = new THREE.MeshLambertMaterial({ color: 0x222222 });
+                const segment = new THREE.Mesh(geometry, material);
+                segment.receiveShadow = true;
+                trackGroup.add(segment);
+
+                // Road markings
+                if (i % 10 === 0) {
+                    const lineGeometry = new THREE.BufferGeometry();
+                    const lineVertices = new Float32Array([
+                        p1.x, p1.y + 0.1, p1.z,
+                        p2.x, p2.y + 0.1, p2.z,
+                    ]);
+                    lineGeometry.setAttribute('position', new THREE.BufferAttribute(lineVertices, 3));
+                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffff00, linewidth: 2 });
+                    const line = new THREE.Line(lineGeometry, lineMaterial);
+                    trackGroup.add(line);
+                }
+            }
+            
+            return trackGroup;
+        }
+        
+        const track = createTrack();
+        scene.add(track);
+        
+        // ============ CAR CREATION ============
+        function createCar(color) {
+            const carGroup = new THREE.Group();
+            
+            // Body
+            const bodyGeometry = new THREE.BoxGeometry(2, 1.5, 4);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                color: color,
+                shininess: 100
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.75;
+            body.castShadow = true;
+            body.receiveShadow = true;
+            carGroup.add(body);
+            
+            // Cabin
+            const cabinGeometry = new THREE.BoxGeometry(1.6, 1, 1.5);
+            const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
+            cabin.position.y = 1.8;
+            cabin.position.z = -0.5;
+            cabin.castShadow = true;
+            cabin.receiveShadow = true;
+            carGroup.add(cabin);
+
+            // Windows
+            const windowGeometry = new THREE.BoxGeometry(0.3, 0.6, 0.5);
+            const windowMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x4488ff,
+                transparent: true,
+                opacity: 0.6
+            });
+            const leftWindow = new THREE.Mesh(windowGeometry, windowMaterial);
+            leftWindow.position.set(-0.7, 1.8, -0.5);
+            carGroup.add(leftWindow);
+
+            const rightWindow = new THREE.Mesh(windowGeometry, windowMaterial);
+            rightWindow.position.set(0.7, 1.8, -0.5);
+            carGroup.add(rightWindow);
+            
+            // Wheels
+            const wheelGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 16);
+            const wheelMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x111111,
+                shininess: 80
+            });
+            
+            const wheelPositions = [
+                { x: -1, z: 1 },
+                { x: 1, z: 1 },
+                { x: -1, z: -1 },
+                { x: 1, z: -1 }
+            ];
+            
+            wheelPositions.forEach(pos => {
+                const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.set(pos.x, 0.8, pos.z);
+                wheel.castShadow = true;
+                wheel.receiveShadow = true;
+                carGroup.add(wheel);
+            });
+
+            // Front lights
+            const lightGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.2);
+            const lightMaterial = new THREE.MeshPhongMaterial({ color: 0xffff00 });
+            const leftLight = new THREE.Mesh(lightGeometry, lightMaterial);
+            leftLight.position.set(-0.7, 0.5, 2);
+            carGroup.add(leftLight);
+
+            const rightLight = new THREE.Mesh(lightGeometry, lightMaterial);
+            rightLight.position.set(0.7, 0.5, 2);
+            carGroup.add(rightLight);
+            
+            return carGroup;
+        }
+        
+        const playerCar = createCar(0xFF3333);
+        playerCar.position.set(0, 0.1, -80);
+        scene.add(playerCar);
+        
+        // ============ AI CARS ============
+        const aiCars = [];
+        const aiColors = [0x3366FF, 0xFFDD00, 0x00FF00];
+        
+        aiColors.forEach((color, index) => {
+            const aiCar = createCar(color);
+            aiCar.position.set(-20 - index * 10, 0.1, -80 + index * 8);
+            aiCar.userData = {
+                speed: 0.25 + Math.random() * 0.1,
+                targetSpeed: 0.25 + Math.random() * 0.1,
+                rotationSpeed: 0.02,
+                wheelRotation: 0
+            };
+            scene.add(aiCar);
+            aiCars.push(aiCar);
+        });
+        
+        // ============ INPUT HANDLING ============
+        const keys = {
+            left: false,
+            right: false,
+            accelerate: false,
+            brake: false
+        };
+        
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const accelerateBtn = document.getElementById('accelerateBtn');
+        const brakeBtn = document.getElementById('brakeBtn');
+        
+        function setupTouchControls(btn, key) {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[key] = true;
+                btn.classList.add('active');
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[key] = false;
+                btn.classList.remove('active');
+            });
+            btn.addEventListener('mousedown', () => {
+                keys[key] = true;
+                btn.classList.add('active');
+            });
+            btn.addEventListener('mouseup', () => {
+                keys[key] = false;
+                btn.classList.remove('active');
+            });
+            btn.addEventListener('mouseleave', () => {
+                keys[key] = false;
+                btn.classList.remove('active');
+            });
+        }
+        
+        setupTouchControls(leftBtn, 'left');
+        setupTouchControls(rightBtn, 'right');
+        setupTouchControls(accelerateBtn, 'accelerate');
+        setupTouchControls(brakeBtn, 'brake');
+        
+        // ============ PLAYER CAR PHYSICS ============
+        playerCar.userData = {
+            speed: 0,
+            maxSpeed: 0.6,
+            acceleration: 0.012,
+            friction: 0.92,
+            rotationSpeed: 0.08,
+            wheelRotation: 0,
+            lapCount: 0,
+            lastPosition: new THREE.Vector3(-100, 0, -80),
+            currentWaypoint: 0,
+            maxLaps: 3
+        };
+        
+        const gameState = {
+            lap: 1,
+            speed: 0,
+            position: 1,
+            gameOver: false,
+            finalPosition: 1
+        };
+        
+        const trackWaypoints = [
+            new THREE.Vector3(0, 0, -80),
+            new THREE.Vector3(100, 0, -80),
+            new THREE.Vector3(120, 0, 0),
+            new THREE.Vector3(100, 0, 80),
+            new THREE.Vector3(0, 0, 100),
+            new THREE.Vector3(-100, 0, 80),
+            new THREE.Vector3(-120, 0, 0),
+            new THREE.Vector3(-100, 0, -80),
+        ];
+        
+        // ============ LAP DETECTION ============
+        function updateLapCounter() {
+            const distToStart = playerCar.position.distanceTo(trackWaypoints[0]);
+            const distToLast = playerCar.userData.lastPosition.distanceTo(trackWaypoints[0]);
+            
+            if (distToStart < 10 && distToLast > 20) {
+                playerCar.userData.lapCount++;
+                gameState.lap = playerCar.userData.lapCount + 1;
+                
+                if (playerCar.userData.lapCount >= playerCar.userData.maxLaps) {
+                    endRace();
+                }
+                
+                document.getElementById('lapCounter').textContent = Math.min(gameState.lap, playerCar.userData.maxLaps + 1);
+            }
+            playerCar.userData.lastPosition.copy(playerCar.position);
+        }
+
+        function endRace() {
+            gameState.gameOver = true;
+            gameState.finalPosition = gameState.position;
+            
+            const positionText = {
+                1: '🥇 1st - Winner!',
+                2: '🥈 2nd - Good Job!',
+                3: '🥉 3rd - Nice Try!'
+            };
+
+            const gameOverStats = document.getElementById('gameOverStats');
+            gameOverStats.innerHTML = `
+                <p>Final Position: ${positionText[gameState.finalPosition] || 'Finished'}</p>
+                <p>Laps Completed: ${playerCar.userData.maxLaps}</p>
+                <p style="font-size: 18px; margin-top: 20px;">Max Speed: ${Math.round(playerCar.userData.speed * 200)} km/h</p>
+            `;
+            
+            document.getElementById('gameOverScreen').classList.add('show');
+        }
+        
+        // ============ UPDATE FUNCTIONS ============
+        function updatePlayerCar() {
+            if (gameState.gameOver) return;
+
+            if (keys.left) {
+                playerCar.rotation.y += playerCar.userData.rotationSpeed;
+            }
+            if (keys.right) {
+                playerCar.rotation.y -= playerCar.userData.rotationSpeed;
+            }
+            
+            if (keys.accelerate) {
+                playerCar.userData.speed = Math.min(
+                    playerCar.userData.speed + playerCar.userData.acceleration,
+                    playerCar.userData.maxSpeed
+                );
+            } else if (keys.brake) {
+                playerCar.userData.speed = Math.max(playerCar.userData.speed - 0.02, 0);
+            } else {
+                playerCar.userData.speed *= playerCar.userData.friction;
+            }
+            
+            const direction = new THREE.Vector3(
+                Math.sin(playerCar.rotation.y),
+                0,
+                Math.cos(playerCar.rotation.y)
+            );
+            playerCar.position.addScaledVector(direction, playerCar.userData.speed);
+            
+            playerCar.userData.wheelRotation += playerCar.userData.speed * 0.8;
+            
+            const speedKmh = Math.round(playerCar.userData.speed * 200);
+            document.getElementById('speedometer').textContent = speedKmh;
+            updateLapCounter();
+            
+            if (playerCar.position.length() > 250) {
+                playerCar.position.set(0, 0.1, -80);
+                playerCar.rotation.y = 0;
+                playerCar.userData.speed = 0;
+            }
+        }
+        
+        function updateAICars() {
+            if (gameState.gameOver) return;
+
+            aiCars.forEach((aiCar, index) => {
+                const targetWaypoint = trackWaypoints[Math.floor(Math.random() * trackWaypoints.length)];
+                const direction = new THREE.Vector3().subVectors(targetWaypoint, aiCar.position).normalize();
+                
+                const targetRotation = Math.atan2(direction.x, direction.z);
+                aiCar.rotation.y += (targetRotation - aiCar.rotation.y) * 0.03;
+                
+                const moveDirection = new THREE.Vector3(
+                    Math.sin(aiCar.rotation.y),
+                    0,
+                    Math.cos(aiCar.rotation.y)
+                );
+                aiCar.position.addScaledVector(moveDirection, aiCar.userData.speed);
+                aiCar.userData.wheelRotation += aiCar.userData.speed * 0.8;
+                
+                if (aiCar.position.length() > 250) {
+                    aiCar.position.set(-20 - index * 10, 0.1, -80 + index * 8);
+                    aiCar.rotation.y = 0;
+                }
+            });
+            
+            const allCars = [playerCar, ...aiCars];
+            allCars.sort((a, b) => b.position.z - a.position.z);
+            gameState.position = allCars.indexOf(playerCar) + 1;
+            
+            const positionText = ['1st', '2nd', '3rd'];
+            document.getElementById('positionCounter').textContent = positionText[gameState.position - 1] || gameState.position + 'th';
+        }
+        
+        function updateCamera() {
+            const cameraDistance = 14;
+            const cameraHeight = 6;
+            
+            const cameraX = playerCar.position.x - Math.sin(playerCar.rotation.y) * cameraDistance;
+            const cameraZ = playerCar.position.z - Math.cos(playerCar.rotation.y) * cameraDistance;
+            
+            camera.position.lerp(
+                new THREE.Vector3(cameraX, playerCar.position.y + cameraHeight, cameraZ),
+                0.08
+            );
+            camera.lookAt(playerCar.position.x, playerCar.position.y + 1, playerCar.position.z);
+        }
+
+        function updateMiniMap() {
+            miniMapCtx.fillStyle = '#000000';
+            miniMapCtx.fillRect(0, 0, 120, 120);
+
+            miniMapCtx.strokeStyle = '#00ff00';
+            miniMapCtx.lineWidth = 2;
+            miniMapCtx.beginPath();
+            miniMapCtx.arc(60, 60, 50, 0, Math.PI * 2);
+            miniMapCtx.stroke();
+
+            const scale = 120 / 250;
+            const centerX = 60;
+            const centerY = 60;
+
+            // Draw player car
+            miniMapCtx.fillStyle = '#ff3333';
+            const playerX = centerX + playerCar.position.x * scale;
+            const playerY = centerY + playerCar.position.z * scale;
+            miniMapCtx.fillRect(playerX - 2, playerY - 2, 4, 4);
+
+            // Draw AI cars
+            aiCars.forEach((aiCar, index) => {
+                const colors = ['#3366FF', '#FFDD00', '#00FF00'];
+                miniMapCtx.fillStyle = colors[index];
+                const aiX = centerX + aiCar.position.x * scale;
+                const aiY = centerY + aiCar.position.z * scale;
+                miniMapCtx.fillRect(aiX - 2, aiY - 2, 4, 4);
+            });
+        }
+        
+        // ============ ANIMATION LOOP ============
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            updatePlayerCar();
+            updateAICars();
+            updateCamera();
+            updateMiniMap();
+            
+            renderer.render(scene, camera);
+        }
+        
+        // ============ WINDOW RESIZE ============
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Prevent accidental zooming
+        document.addEventListener('touchmove', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        animate();
+    </script>
+</body>
+</html>
